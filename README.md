@@ -9,3 +9,9 @@ Run the example:
 make run
 ```
 
+Run the tests:
+
+```bash
+make test
+```
+

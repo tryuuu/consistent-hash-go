@@ -34,6 +34,7 @@ func (hr *HashRing) Add(node string) {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
 
+	// add virtual nodes
 	for i := 0; i < hr.replicas; i++ {
 		virtualKey := fmt.Sprintf("%s#%d", node, i)
 		h := hr.hash([]byte(virtualKey))
