@@ -8,29 +8,41 @@ import (
 )
 
 type HashRing struct {
-	mu   sync.RWMutex
-	hash func([]byte) uint32
-	keys []uint32
-	ring map[uint32]string
+	mu       sync.RWMutex
+	hash     func([]byte) uint32
+	replicas int
+	keys     []uint32
+	ring     map[uint32]string
 }
 
-func New() *HashRing {
+func New(replicas int) *HashRing {
+	if replicas <= 0 {
+		replicas = 1
+	}
 	return &HashRing{
 		hash: func(b []byte) uint32 {
 			h := fnv.New32a()
 			h.Write(b)
 			return h.Sum32()
 		},
-		ring: make(map[uint32]string),
+		replicas: replicas,
+		ring:     make(map[uint32]string),
 	}
 }
 
 func (hr *HashRing) Add(node string) {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
-	h := hr.hash([]byte(node))
-	hr.ring[h] = node
-	hr.keys = append(hr.keys, h)
+
+	for i := 0; i < hr.replicas; i++ {
+		virtualKey := fmt.Sprintf("%s#%d", node, i)
+		h := hr.hash([]byte(virtualKey))
+		if _, exists := hr.ring[h]; exists {
+			continue
+		}
+		hr.ring[h] = node
+		hr.keys = append(hr.keys, h)
+	}
 	sort.Slice(hr.keys, func(i, j int) bool { return hr.keys[i] < hr.keys[j] })
 }
 

@@ -7,11 +7,12 @@ import (
 )
 
 func main() {
-	ring := consistenthash.New()
+	ring := consistenthash.New(3)
 	ring.Add("NodeA")
 	ring.Add("NodeB")
 	ring.Add("NodeC")
 
+	// debug
 	fmt.Println(ring)
 	fmt.Println()
 
