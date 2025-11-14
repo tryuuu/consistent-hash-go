@@ -47,6 +47,26 @@ func (hr *HashRing) Add(node string) {
 	sort.Slice(hr.keys, func(i, j int) bool { return hr.keys[i] < hr.keys[j] })
 }
 
+func (hr *HashRing) Remove(node string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+
+	for i := 0; i < hr.replicas; i++ {
+		virtualKey := fmt.Sprintf("%s#%d", node, i)
+		h := hr.hash([]byte(virtualKey))
+		if _, exists := hr.ring[h]; !exists {
+			continue
+		}
+		delete(hr.ring, h)
+		for j, key := range hr.keys {
+			if key == h {
+				hr.keys = append(hr.keys[:j], hr.keys[j+1:]...)
+				break
+			}
+		}
+	}
+}
+
 func (hr *HashRing) Get(key string) string {
 	hr.mu.RLock()
 	defer hr.mu.RUnlock()
@@ -54,8 +74,6 @@ func (hr *HashRing) Get(key string) string {
 		return ""
 	}
 	h := hr.hash([]byte(key))
-	// debug
-	fmt.Printf("key=%s, hash=%d\n", key, h)
 
 	idx := sort.Search(len(hr.keys), func(i int) bool { return hr.keys[i] >= h })
 	if idx == len(hr.keys) {
