@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/tryuuu/consistent-hash-go/consistenthash"
+	"github.com/tryuuu/consistent-hash-go/distributor"
 	"github.com/tryuuu/consistent-hash-go/hash"
 )
 
@@ -17,15 +18,18 @@ func generateTestKeys(count int) []string {
 	return keys
 }
 
-// measures how many keys are remapped after a node operation
-func measureRemapping(
-	keys []string,
-	beforeMapping map[string]string,
-	getNode func(string) string,
-) int {
+func recordMapping(keys []string, dist distributor.HashDistributor) map[string]string {
+	mapping := make(map[string]string, len(keys))
+	for _, key := range keys {
+		mapping[key] = dist.Get(key)
+	}
+	return mapping
+}
+
+func measureRemapping(keys []string, beforeMapping map[string]string, dist distributor.HashDistributor) int {
 	remapped := 0
 	for _, key := range keys {
-		afterNode := getNode(key)
+		afterNode := dist.Get(key)
 		if beforeMapping[key] != afterNode {
 			remapped++
 		}
@@ -33,93 +37,75 @@ func measureRemapping(
 	return remapped
 }
 
-func runBenchmark() {
-	numKeys := 10000
-	numInitialNodes := 5
-	numNodesToAdd := 2
+func benchmarkHashDistributor(
+	name string,
+	dist distributor.HashDistributor,
+	testKeys []string,
+	numKeys, numInitialNodes, numNodesToAdd int,
+) {
+	fmt.Printf("--- %s ---\n", name)
 
-	testKeys := generateTestKeys(numKeys)
-
-	// Consistent Hash
-	fmt.Println("--- Consistent Hash ---")
-	chRing := consistenthash.New(150) // 150 replicas for better distribution
+	// Initialize nodes
 	initialNodes := make([]string, numInitialNodes)
 	for i := 0; i < numInitialNodes; i++ {
 		nodeName := fmt.Sprintf("Node%d", i)
 		initialNodes[i] = nodeName
-		chRing.Add(nodeName)
+		dist.Add(nodeName)
 	}
 
 	// Record initial mapping
-	chBeforeMapping := make(map[string]string)
-	for _, key := range testKeys {
-		chBeforeMapping[key] = chRing.Get(key)
-	}
+	beforeMapping := recordMapping(testKeys, dist)
 
-	// Add nodes
-	nodesToAdd := make([]string, numNodesToAdd)
+	// Add new nodes
 	for i := 0; i < numNodesToAdd; i++ {
 		nodeName := fmt.Sprintf("Node%d", numInitialNodes+i)
-		nodesToAdd[i] = nodeName
-		chRing.Add(nodeName)
+		dist.Add(nodeName)
 	}
 
 	// Measure remapping after adding nodes
-	chRemappedAfterAdd := measureRemapping(testKeys, chBeforeMapping, chRing.Get)
-	chAfterAddMapping := make(map[string]string)
-	for _, key := range testKeys {
-		chAfterAddMapping[key] = chRing.Get(key)
-	}
+	remappedAfterAdd := measureRemapping(testKeys, beforeMapping, dist)
+	afterAddMapping := recordMapping(testKeys, dist)
 
-	// Remove nodes
-	nodeToRemove := initialNodes[0]
-	chRing.Remove(nodeToRemove)
+	// Remove a node
+	dist.Remove(initialNodes[0])
 
 	// Measure remapping after removing node
-	chRemappedAfterRemove := measureRemapping(testKeys, chAfterAddMapping, chRing.Get)
+	remappedAfterRemove := measureRemapping(testKeys, afterAddMapping, dist)
 
+	// Print results
 	fmt.Printf("After adding %d nodes:\n", numNodesToAdd)
-	fmt.Printf("  Remapped keys: %d (%.2f%%)\n", chRemappedAfterAdd, float64(chRemappedAfterAdd)/float64(numKeys)*100)
+	fmt.Printf("  Remapped keys: %d (%.2f%%)\n", remappedAfterAdd, float64(remappedAfterAdd)/float64(numKeys)*100)
 	fmt.Printf("After removing 1 node:\n")
-	fmt.Printf("  Remapped keys: %d (%.2f%%)\n", chRemappedAfterRemove, float64(chRemappedAfterRemove)/float64(numKeys)*100)
+	fmt.Printf("  Remapped keys: %d (%.2f%%)\n", remappedAfterRemove, float64(remappedAfterRemove)/float64(numKeys)*100)
 	fmt.Println()
+}
 
-	// Simple Hash
-	fmt.Println("--- Simple Hash (Normal Hash Function) ---")
-	shHash := hash.New()
-	for i := 0; i < numInitialNodes; i++ {
-		shHash.Add(initialNodes[i])
-	}
+func runBenchmark() {
+	const (
+		numKeys         = 10000
+		numInitialNodes = 5
+		numNodesToAdd   = 2
+	)
 
-	// Record initial mapping
-	shBeforeMapping := make(map[string]string)
-	for _, key := range testKeys {
-		shBeforeMapping[key] = shHash.Get(key)
-	}
+	testKeys := generateTestKeys(numKeys)
 
-	// Add nodes
-	for i := 0; i < numNodesToAdd; i++ {
-		shHash.Add(nodesToAdd[i])
-	}
+	benchmarkHashDistributor(
+		"Consistent Hash",
+		consistenthash.New(150),
+		testKeys,
+		numKeys,
+		numInitialNodes,
+		numNodesToAdd,
+	)
 
-	// Measure remapping after adding nodes
-	shRemappedAfterAdd := measureRemapping(testKeys, shBeforeMapping, shHash.Get)
-	shAfterAddMapping := make(map[string]string)
-	for _, key := range testKeys {
-		shAfterAddMapping[key] = shHash.Get(key)
-	}
-
-	// Remove node
-	shHash.Remove(nodeToRemove)
-
-	// Measure remapping after removing node
-	shRemappedAfterRemove := measureRemapping(testKeys, shAfterAddMapping, shHash.Get)
-
-	fmt.Printf("After adding %d nodes:\n", numNodesToAdd)
-	fmt.Printf("  Remapped keys: %d (%.2f%%)\n", shRemappedAfterAdd, float64(shRemappedAfterAdd)/float64(numKeys)*100)
-	fmt.Printf("After removing 1 node:\n")
-	fmt.Printf("  Remapped keys: %d (%.2f%%)\n", shRemappedAfterRemove, float64(shRemappedAfterRemove)/float64(numKeys)*100)
-	fmt.Println()
+	benchmarkHashDistributor(
+		"Simple Hash (Normal Hash Function)",
+		hash.New(),
+		testKeys,
+		numKeys,
+		numInitialNodes,
+		numNodesToAdd,
+	)
 }
 
 func main() {

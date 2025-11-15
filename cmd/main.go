@@ -4,36 +4,24 @@ import (
 	"fmt"
 
 	"github.com/tryuuu/consistent-hash-go/consistenthash"
+	"github.com/tryuuu/consistent-hash-go/distributor"
 	"github.com/tryuuu/consistent-hash-go/hash"
 )
 
-func main() {
-	fmt.Println("=== Consistent Hash ===")
-	ring := consistenthash.New(3)
-	ring.Add("NodeA")
-	ring.Add("NodeB")
-	ring.Add("NodeC")
-
-	// debug
-	fmt.Println(ring)
-	fmt.Println()
+func testHashDistributor(name string, dist distributor.HashDistributor) {
+	fmt.Printf("=== %s ===\n", name)
+	dist.Add("NodeA")
+	dist.Add("NodeB")
+	dist.Add("NodeC")
 
 	keys := []string{"apple", "banana", "cherry", "grape", "melon"}
 	for _, k := range keys {
-		fmt.Printf("%s → %s\n", k, ring.Get(k))
+		fmt.Printf("%s → %s\n", k, dist.Get(k))
 	}
-
-	fmt.Println("\n=== Simple Hash ===")
-	simpleHash := hash.New()
-	simpleHash.Add("NodeA")
-	simpleHash.Add("NodeB")
-	simpleHash.Add("NodeC")
-
-	// debug
-	fmt.Println(simpleHash)
 	fmt.Println()
+}
 
-	for _, k := range keys {
-		fmt.Printf("%s → %s\n", k, simpleHash.Get(k))
-	}
+func main() {
+	testHashDistributor("Consistent Hash", consistenthash.New(3))
+	testHashDistributor("Simple Hash", hash.New())
 }
