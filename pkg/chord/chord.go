@@ -3,7 +3,6 @@ package chord
 import (
 	"fmt"
 	"hash/fnv"
-	"math"
 	"sort"
 	"sync"
 
@@ -117,19 +116,14 @@ func (cr *ChordRing) rebuild() {
 		n.predecessor = predID
 	}
 
-	maxID := uint32(math.MaxUint32)
-	mod := maxID + 1
-
 	for _, id := range cr.sortedIDs {
 		n := cr.nodes[id]
 		for i := 0; i < HashSpaceBits; i++ {
 			start := id + (1 << uint(i))
-			start %= mod
 			succ := cr.findSuccessorOnRing(start)
 			if succ != nil {
 				n.fingerTable[i] = succ.id
 			} else {
-				// fallback
 				n.fingerTable[i] = id
 			}
 		}
