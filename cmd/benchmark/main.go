@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
-	"time"
 
 	"github.com/tryuuu/consistent-hash-go/pkg/consistenthash"
 	"github.com/tryuuu/consistent-hash-go/pkg/distributor"
@@ -109,6 +107,5 @@ func runBenchmark() {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	runBenchmark()
 }
