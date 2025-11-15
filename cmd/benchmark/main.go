@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/tryuuu/consistent-hash-go/consistenthash"
-	"github.com/tryuuu/consistent-hash-go/distributor"
-	"github.com/tryuuu/consistent-hash-go/hash"
+	"github.com/tryuuu/consistent-hash-go/pkg/consistenthash"
+	"github.com/tryuuu/consistent-hash-go/pkg/distributor"
+	"github.com/tryuuu/consistent-hash-go/pkg/hash"
 )
 
 func generateTestKeys(count int) []string {

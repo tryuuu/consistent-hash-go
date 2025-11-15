@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/tryuuu/consistent-hash-go/consistenthash"
-	"github.com/tryuuu/consistent-hash-go/distributor"
-	"github.com/tryuuu/consistent-hash-go/hash"
+	"github.com/tryuuu/consistent-hash-go/pkg/consistenthash"
+	"github.com/tryuuu/consistent-hash-go/pkg/distributor"
+	"github.com/tryuuu/consistent-hash-go/pkg/hash"
 )
 
 func testHashDistributor(name string, dist distributor.HashDistributor) {
